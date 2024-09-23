@@ -33,7 +33,7 @@ thonny-friendly == 0.0.5
 #thonny-error-explainer
 
 #Sections scientifiques
-pandas == 2.2.2
+pandas == 2.2.3
 numpy == 2.1.1
 matplotlib == 3.9.2
 
