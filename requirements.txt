@@ -35,7 +35,7 @@ thonny-friendly == 0.0.6
 #Sections scientifiques
 pandas == 2.2.3
 numpy == 2.2.2
-matplotlib == 3.10.0
+matplotlib == 3.10.1
 
 #Section economie
 xlrd == 2.0.1
