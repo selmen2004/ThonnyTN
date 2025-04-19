@@ -23,7 +23,9 @@ thonny-202 == 0.1
 thonny-dracula == 0.1.2
 
 #Thonny generic plugins
-thonny-block-highlight == 0.3
+#thonny-block-highlight == 0.3
+#as this plugin is no longer maintained , a new one is created :
+thonnyTN-block-highlight == 0.3.1
 
 #thonny linters :
 thonny-friendly == 0.0.6
