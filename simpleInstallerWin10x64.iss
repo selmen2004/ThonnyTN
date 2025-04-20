@@ -31,6 +31,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 CreateAppDir=no
 ChangesAssociations=yes
+DefaultGroupName=ThonnyTN
 ; Remove the following line to run in administrative install mode (install for all users.)
 ;PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=commandline
@@ -76,16 +77,16 @@ Name: "DesignerDesktopIcon"; Description: "Créer icone bureau pour Designer"   
 Name: "LabDesktopIcon"; Description: "Créer icone bureau pour Jupyter Lab"   ; Components: "bac_eco\jupyter_lab"
 Name: "NotebookDesktopIcon"; Description: "Créer icone bureau pour Jupyter Notebook Clasique"   ; Components: "bac_eco\jupyter_notebook"
 [Icons]
-Name: "{group}\PyTn\Thonny"; Filename: "{#PythonLocalInstallDir}\Scripts\thonny.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\thonny\res\thonny.ico" ; Components: "editors"
+Name: "{group}\Thonny"; Filename: "{#PythonLocalInstallDir}\Scripts\thonny.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\thonny\res\thonny.ico" ; Components: "editors"
 ;test : relying on the system vars 
-;Name: "{group}\PyTn\Thonny2"; Filename: "thonny.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\thonny\res\thonny.ico" ; Components: "editors"  
-Name: "{group}\PyTn\QT Designer"; Filename: "{#PythonLocalInstallDir}\Lib\site-packages\PyQt5\Qt5\bin\designer.exe" ; Components: "bac_sc" 
+;Name: "{group}\Thonny2"; Filename: "thonny.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\thonny\res\thonny.ico" ; Components: "editors"  
+Name: "{group}\QT Designer"; Filename: "{#PythonLocalInstallDir}\Lib\site-packages\PyQt5\Qt5\bin\designer.exe" ; Components: "bac_sc" 
 ;test : relying on the system vars 
-;Name: "{group}\PyTn\QT Designer2"; Filename: "pyqt5_qt5_designer.exe" ; Components: "bac_sc" 
+;Name: "{group}\QT Designer2"; Filename: "pyqt5_qt5_designer.exe" ; Components: "bac_sc" 
 Name: "{autodesktop}\Thonny"; Filename: "{#PythonLocalInstallDir}\Scripts\thonny.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\thonny\res\thonny.ico" ; Tasks: "ThonnyDesktopIcon" 
 Name: "{autodesktop}\Qt Designer"; Filename: "{#PythonLocalInstallDir}\Scripts\pyqt5_qt5_designer.exe";IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\PyQt5\Qt5\bin\Designer.exe"; Tasks: "DesignerDesktopIcon"
-Name: "{group}\PyTn\Jupyter Lab"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-lab.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicon.ico " ;WorkingDir:"C:\bac2024\"; Components: "bac_eco"
-Name: "{group}\PyTn\Jupyter Notebook Clasique"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-nbclassic.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicons\favicon-notebook.ico " ;WorkingDir:"C:\bac2024\"; Components: "bac_eco"
+Name: "{group}\Jupyter Lab"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-lab.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicon.ico " ;WorkingDir:"C:\bac2024\"; Components: "bac_eco"
+Name: "{group}\Jupyter Notebook Clasique"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-nbclassic.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicons\favicon-notebook.ico " ;WorkingDir:"C:\bac2024\"; Components: "bac_eco"
 Name: "{autodesktop}\Jupyter Lab"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-lab.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicon.ico " ;WorkingDir:"C:\bac2024\"; Tasks: "LabDesktopIcon"
 Name: "{autodesktop}\Jupyter Notebook Clasique"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-nbclassic.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicons\favicon-notebook.ico " ;WorkingDir:"C:\bac2024\"; Tasks: "NotebookDesktopIcon"
 
