@@ -28,7 +28,7 @@ thonny-dracula == 0.1.2
 thonnyTN-block-highlight == 0.3.1
 
 #thonny linters :
-thonny-friendly == 0.0.6
+thonny-friendly == 0.0.7
 #@TODO : Test those :
 #thonny-edulint
 #thonny-flake
