@@ -10,7 +10,7 @@ pyqt5_qt5_designer == 0.0.14
 
 #thonny_palestine_flag (not in pip )
 thonny-autosave == 0.0.22
-thonny-loaduiautocomplete == 0.2.0
+thonny-loaduiautocomplete == 0.2.2
 thonny-tunisiaschools == 0.0.14
 
 #needed by thonny
