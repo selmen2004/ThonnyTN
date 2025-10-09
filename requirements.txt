@@ -1,7 +1,7 @@
 #l'editeur python utilisé
 thonny == 4.1.7
 #prise en charge de esp32/esp8266
-esptool == 4.9.0
+esptool == 5.1.0
 
 #Ajouts Selmen 
 
