@@ -15,7 +15,7 @@ thonny-tunisiaschools == 0.0.14
 
 #needed by thonny
 pyserial == 3.5
-wheel == 0.45.1
+wheel == 0.46.2
 
 #thonny themes :
 thonny-onedark == 0.2.0
