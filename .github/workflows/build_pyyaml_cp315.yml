@@ -30,7 +30,14 @@ name: Construire le wheel PyYAML cp315 accelere (libyaml)
 # « cp *.whl depsx64 » embarque deja), et noter le sha256 affiche dans la
 # release (c'est l'item 11 du plan : un fichier de provenance vrai).
 
+# Declencheur provisoire : GitHub ne fait apparaitre « Run workflow » que pour les
+# workflows deja presents sur la branche par defaut (main — verifie par l'API :
+# GET /actions/workflows ne liste que les 5 fichiers de main). Le temps que ce
+# fichier soit fusionne, une poussee sur cette branche lance exactement le meme
+# job, avec les valeurs par defaut des entrees. A retirer a la fusion.
 on:
+  push:
+    branches: ['py315-pyyaml-wheel']
   workflow_dispatch:
     inputs:
       python_version:
