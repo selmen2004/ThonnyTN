@@ -14,24 +14,75 @@ jobs:
     
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
-        
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.13'
-          
-        
-      - name: Run Python Script
-        run: 'python ./python_last_version.py'         
+        uses: actions/checkout@v4
 
-        
+      # python.version est la seule source de vérité : c'est ce que
+      # python_last_version.py télécharge ET ce que le .iss encode dans les
+      # chemins. L'interpréteur de build doit être la même version, car
+      # « pip download » choisit les wheels pour l'interpréteur qui l'exécute.
+      # Télécharger avec 3.13 pour une distribution 3.14 embarque silencieusement
+      # des wheels cp313 (numpy et PyQt5-sip n'ont pas de tag abi3), et
+      # l'installation hors-ligne échoue ensuite chez l'élève.
+      - name: Lire la version Python cible
+        id: target
+        shell: bash
+        run: |
+          VERSION=$(tr -d '\r\n' < python.version)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "series=${VERSION%.*}" >> "$GITHUB_OUTPUT"
+          echo "Version Python embarquée dans l'installateur : ${VERSION}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '${{ steps.target.outputs.series }}'
+
+      - name: Vérifier l'interpréteur de build
+        shell: bash
+        run: |
+          python - <<'PY'
+          import sys
+          target = open("python.version").read().strip()
+          build = ".".join(map(str, sys.version_info[:3]))
+          print("interpréteur de build : %s" % build)
+          print("python.version        : %s" % target)
+          # Ce qui compte pour pip download, c'est la série (tag cp3XY des
+          # wheels). Un décalage de patch-level est normal quand setup-python
+          # propose plus récent que python.version : on le signale sans casser.
+          if build.rpartition(".")[0] != target.rpartition(".")[0]:
+              sys.exit(
+                  "LE BUILD SERAIT CASSÉ : pip download produirait des wheels "
+                  "pour %s alors que la distribution embarque %s." % (build, target)
+              )
+          if build != target:
+              print("::warning:: série OK mais patch différent : build %s / livré %s"
+                    % (build, target))
+          PY
+
+      - name: Run Python Script
+        run: 'python ./python_last_version.py'
+
+      # « py » est le lanceur Windows : il résout depuis le registre et peut
+      # choisir le Python du runner plutôt que celui installé par setup-python.
       - name: Download Dependencies
-        run: py -m pip download -r "./requirements.txt" --extra-index-url https://riverbankcomputing.com/pypi/simple/ -d depsx64
+        run: python -m pip download -r "./requirements.txt" --extra-index-url https://riverbankcomputing.com/pypi/simple/ -d depsx64
         
       - name: Ajout des autres whl
         run: cp *.whl depsx64
-        
+
+      # Portillon : reproduit l'installation hors-ligne exactement comme Inno
+      # Setup la déroulera chez l'élève (--no-index, mêmes wheels), puis laisse
+      # le propre chargeur de plugins de Thonny importer chaque thonnycontrib.
+      # Thonny avale les erreurs d'import plugin dans frontend.log : un plugin
+      # cassé partirait autrement « avec succès » vers tous les lycées.
+      - name: Smoke test des plugins Thonny
+        shell: bash
+        run: |
+          python -m venv smoke
+          smoke/Scripts/python.exe -m pip install --no-index --find-links depsx64 -r requirements.txt
+          smoke/Scripts/python.exe -m pip install --no-index --no-deps depsx64/thonny_palestine_flag-*.whl
+          smoke/Scripts/python.exe plugin_smoke_test.py
+
       - name: read python version components
         shell: cmd
         run: |
