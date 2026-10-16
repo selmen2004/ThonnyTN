@@ -57,9 +57,8 @@ Name: "editors\friendly" ; Description: "Afficher une explication des erreurs da
 Name: "editors\highlight" ; Description: "Délimiteur pour blocs dans thonny (Excellent pour débutant)" ; Types: full compact custom;
 Name: "editors\themes" ; Description: "Thèmes pour Thonny(onedark , 202 , dracula)" ; Types: full compact custom;
 Name: "bac_sc"; Description: "Bibliothèques pour bac scientifiques / bac informatiques : PyQt5 / Numpy / Designer "; Types: full compact custom;
-Name: "bac_eco"; Description: "Bibliothèques pour bac économie:  pandas matplotlib xlrd xlsxwriter xlwt openpyxl"; Types: full compact custom;
-Name: "bac_eco\jupyter_lab"; Description: "Installation Jupyter Lab"; Types: full compact custom;
-Name: "bac_eco\jupyter_notebook"; Description: "Installation Jupyter Notebook"; Types: full compact custom;
+;Retiré 2026-10-08 : la filière Économie-Gestion (pandas / matplotlib / Jupyter / Excel)
+;ne fait pas partie du programme Sciences Informatique. Voir requirements.txt.
 
 
 [Files]
@@ -67,6 +66,9 @@ Name: "bac_eco\jupyter_notebook"; Description: "Installation Jupyter Notebook"; 
 ;Source: "G:\dev\python\pytn\win7x86\Windows6.1-KB2999226-x86.msu"; DestDir: "{tmp}"; Flags: ignoreversion ; 
 Source: "python-{#PythonVersion}-{#arch}.exe"; DestDir: "{tmp}"; Flags: ignoreversion ; Components: "python_installer"
 Source: "RefreshEnv.cmd"; DestDir: "{tmp}";
+; Harnais de verification : lance le propre chargeur de plugins de Thonny apres
+; la derniere ligne [Run]. Voir install_verification.iss.
+Source: "plugin_smoke_test.py"; DestDir: "{tmp}";
 Source: "depsx64\*.whl" ; DestDir: "{tmp}\deps\";
 Source: "depsx64\*.tar.gz" ; DestDir: "{tmp}\deps\";
 ;Source: "G:\dev\python\pytn\win7x86\designer\*.*" ; DestDir: "{localappdata}\Programs\Python\Python311-32\Lib\site-packages\PyQt5\Qt5\bin\"    ; Components: "bac_sc"
@@ -74,8 +76,6 @@ Source: "depsx64\*.tar.gz" ; DestDir: "{tmp}\deps\";
 [Tasks]
 Name: "ThonnyDesktopIcon"; Description: "Créer icone bureau pour Thonny"   ; Components: "editors"
 Name: "DesignerDesktopIcon"; Description: "Créer icone bureau pour Designer"   ; Components: "bac_sc"
-Name: "LabDesktopIcon"; Description: "Créer icone bureau pour Jupyter Lab"   ; Components: "bac_eco\jupyter_lab"
-Name: "NotebookDesktopIcon"; Description: "Créer icone bureau pour Jupyter Notebook Clasique"   ; Components: "bac_eco\jupyter_notebook"
 [Icons]
 Name: "{group}\Thonny"; Filename: "{#PythonLocalInstallDir}\Scripts\thonny.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\thonny\res\thonny.ico" ; Components: "editors"
 ;test : relying on the system vars 
@@ -85,10 +85,9 @@ Name: "{group}\QT Designer"; Filename: "{#PythonLocalInstallDir}\Lib\site-packag
 ;Name: "{group}\QT Designer2"; Filename: "pyqt5_qt5_designer.exe" ; Components: "bac_sc" 
 Name: "{autodesktop}\Thonny"; Filename: "{#PythonLocalInstallDir}\Scripts\thonny.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\thonny\res\thonny.ico" ; Tasks: "ThonnyDesktopIcon" 
 Name: "{autodesktop}\Qt Designer"; Filename: "{#PythonLocalInstallDir}\Scripts\pyqt5_qt5_designer.exe";IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\PyQt5\Qt5\bin\Designer.exe"; Tasks: "DesignerDesktopIcon"
-Name: "{group}\Jupyter Lab"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-lab.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicon.ico " ;WorkingDir:"C:\bac2024\"; Components: "bac_eco"
-Name: "{group}\Jupyter Notebook Clasique"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-nbclassic.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicons\favicon-notebook.ico " ;WorkingDir:"C:\bac2024\"; Components: "bac_eco"
-Name: "{autodesktop}\Jupyter Lab"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-lab.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicon.ico " ;WorkingDir:"C:\bac2024\"; Tasks: "LabDesktopIcon"
-Name: "{autodesktop}\Jupyter Notebook Clasique"; Filename: "{#PythonLocalInstallDir}\Scripts\jupyter-nbclassic.exe"; IconFilename: "{#PythonLocalInstallDir}\Lib\site-packages\jupyter_server\static\favicons\favicon-notebook.ico " ;WorkingDir:"C:\bac2024\"; Tasks: "NotebookDesktopIcon"
+;Retiré 2026-10-08 : raccourcis Jupyter Lab / Jupyter Notebook (filière Économie-Gestion).
+;Ces 4 lignes contenaient aussi le WorkingDir codé en dur "C:\bac2024\" qui cassait
+;pour les promotions après 2024 — bug supprimé en même temps.
 
 [Registry]
 ;Root: HKA; Subkey: "Software\Classes\{#MyAppAssocExt}\OpenWithProgids"; ValueType: string; ValueName: "{#MyAppAssocKey}"; ValueData: ""; Flags: uninsdeletevalue
@@ -102,9 +101,8 @@ Filename:"{tmp}\python-{#PythonVersion}-{#arch}.exe" ;Parameters:  "/passive Pre
 Filename:"cmd.exe" ;Parameters: "/q /c mode 80,5 && title Installation de Thonny ... && {tmp}\RefreshEnv.cmd &&  py.exe -m pip install thonny esptool --upgrade --no-index --find-links {tmp}\deps --prefer-binary  >> {tmp}\innosetup.log" ;StatusMsg:"Installation de Thonny ... "; Components: "editors"
 Filename:"cmd.exe" ;Parameters: "/q /c mode 80,5 && title Installation de Bibliothèques Bac Scientifiques ... && {tmp}\RefreshEnv.cmd &&  py.exe -m pip install pyqt5 numpy --upgrade --no-index --find-links {tmp}\deps --prefer-binary >> {tmp}\innosetup.log" ;StatusMsg:"Installation de Bibliothèques Bac Scientifiques ... "; Components: "bac_sc"
 Filename:"cmd.exe" ;Parameters: "/q /c mode 80,5 && title Installation de Qt5 Designer ... && {tmp}\RefreshEnv.cmd &&  py.exe -m pip install pyqt5_qt5_designer --upgrade --no-index --find-links {tmp}\deps --prefer-binary >> {tmp}\innosetup.log" ;StatusMsg:"Installation de Designer ... "; Components: "bac_sc"
-Filename:"cmd.exe" ;Parameters: "/q /c mode 80,5 && title Installation de Bibilithèques Bac Economie  ... &&{tmp}\RefreshEnv.cmd &&  py.exe -m pip install pandas matplotlib xlrd xlsxwriter xlwt openpyxl --upgrade --no-index --prefer-binary --find-links {tmp}\deps >> {tmp}\innosetup.log" ;StatusMsg:"Installation de Bibilithèques Bac Economie  ... "; Components: "bac_eco"
-Filename:"cmd.exe" ;Parameters: "/q /c mode 80,5 && title Installation de Jupyter Lab  ... &&{tmp}\RefreshEnv.cmd &&  py.exe -m pip install jupyterlab --upgrade --no-index --prefer-binary --find-links {tmp}\deps >> {tmp}\innosetup.log" ;StatusMsg:"Installation de Jupyter Lab  ... "; Components: "bac_eco\jupyter_lab"
-Filename:"cmd.exe" ;Parameters: "/q /c mode 80,5 && title Installation de Jupyter Notebook Classique... &&{tmp}\RefreshEnv.cmd &&  py.exe -m pip install notebook --upgrade --no-index --prefer-binary --find-links {tmp}\deps >> {tmp}\innosetup.log" ;StatusMsg:"Installation de Jupyter Notebook Classique  ... "; Components: "bac_eco\jupyter_notebook"
+;Retiré 2026-10-08 : installation des bibliothèques Économie-Gestion
+;(pandas matplotlib xlrd xlsxwriter xlwt openpyxl / jupyterlab / notebook) — hors programme SI.
 Filename:"cmd.exe" ;Parameters: "/q /c mode 80,5 && title القدس لنا وكل فلسطين  &&{tmp}\RefreshEnv.cmd &&  py.exe -m pip install thonny_palestine_flag --upgrade --no-index --prefer-binary --find-links {tmp}\deps >> {tmp}\innosetup.log" ;StatusMsg:"Installation de Palestine Flag pour Thonny  ... "; Components: "editors\ps_flag_thonny"
 Filename:"cmd.exe" ;Parameters: "/q /c mode 80,5 && title Installation de Thonny Autosave... &&{tmp}\RefreshEnv.cmd &&  py.exe -m pip install thonny-autosave --upgrade --no-index --prefer-binary --find-links {tmp}\deps >> {tmp}\innosetup.log" ;StatusMsg:"Installation de Thonny Autosave  ... "; Components: "editors\thonny_autosave"
 Filename:"cmd.exe" ;Parameters: "/q /c mode 80,5 && title Installation de Thonny loadui autocomplete ... &&{tmp}\RefreshEnv.cmd &&  py.exe -m pip install thonny-loaduiautocomplete --upgrade --no-index --prefer-binary --find-links {tmp}\deps >> {tmp}\innosetup.log" ;StatusMsg:"Installation de Thonny loadui autocomplete   ... "; Components: "editors\thonny_loaduiautocomplete"
@@ -121,3 +119,8 @@ begin
   //Pour afficher correctement le license(ascii art)
   WizardForm.LicenseMemo.Font.Name:='Consolas'
 end;
+
+// La verification de fin d'installation (item 9 du plan) est dans un fichier
+// sepere : le meme code est compile par l'installateur livre et par la sonde de
+// test, qui tourne sans charge Python.
+#include "install_verification.iss"
