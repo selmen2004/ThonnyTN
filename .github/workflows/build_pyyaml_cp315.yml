@@ -95,20 +95,41 @@ jobs:
               sys.exit("LE WHEEL SERAIT TAGGUÉ cp%s, PAS cp%s." % ("".join(got), "".join(cible)))
           PY
 
+      # Le sdist est telecharge par l'API JSON de PyPI, pas par pip : « pip
+      # download --no-binary :all: » ne se contente pas de poser l'archive, il la
+      # COMPILE pour produire un wheel — et « :all: » s'applique aussi a
+      # l'isolation de build, done Cython est retente depuis les sources. Mesure
+      # local (run n°2 echouait ici) : « Failed to build 'pyyaml' when installing
+      # build dependencies for pyyaml ». Ici on ecrit l'octet-exact de PyPI et on
+      # le hache avant de s'en servir.
       - name: Telecharger le sdist officiel et verifier son empreinte
         shell: bash
         run: |
-          python -m pip download --no-deps --no-binary :all: -d sdist \
-            "pyyaml==$PYYAML_VERSION"
           python - <<'PY'
-          import glob, hashlib, os, sys
-          path = glob.glob("sdist/pyyaml-*.tar.gz")[0]
-          got = hashlib.sha256(open(path, "rb").read()).hexdigest()
+          import hashlib, json, os, sys, urllib.request
+          ver = os.environ["PYYAML_VERSION"].strip()
+          meta = json.load(urllib.request.urlopen(
+              "https://pypi.org/pypi/pyyaml/%s/json" % ver))
+          sd = [f for f in meta["urls"] if f["packagetype"] == "sdist"]
+          assert len(sd) == 1, " attendu un seul sdist, trouve : %s" % sd
+          f = sd[0]
+          print("sdist PyPI :", f["filename"], "|", f["size"], "octets")
+          print("url        :", f["url"])
+          blob = urllib.request.urlopen(f["url"]).read()
+          got = hashlib.sha256(blob).hexdigest()
+          declared = f.get("digests", {}).get("sha256")
           want = os.environ["PYYAML_SHA256"].strip()
-          print("sdist  :", path)
-          print("sha256 :", got)
+          print("sha256 calcule :", got)
+          print("sha256 PyPI    :", declared)
+          if got != declared:
+              sys.exit("LE FICHER TELECHARGE NE CORRESPOND PAS AU HASH ANNONCE PAR PyPI.")
           if got != want:
               sys.exit("EMPREINTE DIFFERENTE DU PIN : %s != %s" % (got, want))
+          os.makedirs("sdist", exist_ok=True)
+          path = os.path.join("sdist", f["filename"])
+          with open(path, "wb") as fh:
+              fh.write(blob)
+          print("ecrit :", path, "|", len(blob), "octets")
           print("empreinte conforme : le code construit est bien celui de PyPI.")
           PY
 
@@ -156,7 +177,7 @@ jobs:
           echo "pyyaml_build_config = $CFG"
           python -m pip wheel --no-deps \
             --config-settings "pyyaml_build_config=$CFG" \
-            -w dist sdist/pyyaml-*.tar.gz
+            -w dist sdist/*.tar.gz
           ls -l dist
 
       # Le wheel est-il reellement accelere ? Un wheel cp315 sans _yaml .pyd
