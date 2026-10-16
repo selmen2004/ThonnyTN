@@ -186,21 +186,28 @@ jobs:
       - name: Verifier le wheel sur le Python vise
         shell: bash
         run: |
-          ls dist/pyyaml-*.whl
+          ls -l dist
           python - <<'PY'
-          import glob, os, zipfile
-          whl = glob.glob("dist/pyyaml-*.whl")[0]
+          import glob, os, re, zipfile
+          whls = glob.glob("dist/*.whl")
+          assert len(whls) == 1, "wheel(s) inattendu(s) dans dist/ : %s" % whls
+          whl = whls[0]
           names = zipfile.ZipFile(whl).namelist()
           pyd = [n for n in names if n.endswith((".pyd", ".dll"))]
-          print("fichiers binaires :", pyd or "AUCUN")
-          assert any(n.endswith("_yaml.pyd") for n in names), \
-              "wheel sans accelerateur : le build a produit du pur Python"
+          print("wheel    :", whl)
+          print("binaires :", pyd or "AUCUN")
+          # Le module s'appelle « _yaml.cp315-win_amd64.pyd » : le suffixe d'ABI
+          # est INCORPORE au nom. Chercher endswith("_yaml.pyd") est donc faux
+          # (c'est l'erreur du run n°3 : le wheel etait bon, le test non).
+          ext = [n for n in names if re.search(r"/_yaml[^/]*\.pyd$", n)]
+          assert ext, "wheel sans accelerateur : aucun module _yaml*.pyd -> %s" % names
           wheel_meta = zipfile.ZipFile(whl).read(
               [n for n in names if n.endswith("WHEEL")][0]).decode()
           print(wheel_meta.strip())
           abi = "cp" + "".join(os.environ["PYTHON_SERIES"].strip().split(".")[:2])
           assert "Tag: %s-%s-win_amd64" % (abi, abi) in wheel_meta, \
               "tag ABI inattendu : %s" % abi
+          print("nom du module accelere :", ext[0])
           PY
           python -m venv verif
           verif/Scripts/python.exe -m pip install --no-index --find-links dist pyyaml
