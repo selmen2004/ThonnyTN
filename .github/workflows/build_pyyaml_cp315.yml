@@ -60,6 +60,14 @@ jobs:
   build:
     runs-on: windows-latest
 
+    # Ecriture seule pour une etape : deposer le wheel sur une branche de transit,
+    # parce que les artifacts Actions ne se telechargent qu'authentifie (mesure :
+    # GET /actions/artifacts/{id}/zip -> 401 « Requires authentication » sur un
+    # depot public). Un wheel pose sur une branche se recuperera par « git fetch »,
+    # donc sans session. Rien d'autre dans ce job n'ecrit.
+    permissions:
+      contents: write
+
     # Les valeurs viennent d'env, pas de « ${{ inputs.* }} » directement : sur un
     # declencheur push, inputs est VIDE et setup-python installe alors autre chose
     # que 3.15 (mesure : run n°1, echec a l'etape 3). Le || fournit le defaut.
@@ -72,6 +80,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 — un push depuis un clone peu profond est refuse par git
+          # (« shallow repository is not allowed »), et l'etape de depot pousse.
+          fetch-depth: 0
 
       # Le wheel porte la serie de l'interpreteur qui le construit :
       # « setup-python 3.15 » n'est pas decoratif, c'est lui qui produit le tag
@@ -232,6 +244,30 @@ jobs:
             echo "$f"
             python -c "import hashlib,sys;print('  sha256', hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$f"
           done
+
+      # Le wheel est depose sur une branche ORPHELINE dediee (un seul fichier +
+      # son empreinte), pas sur la branche du workflow : « git fetch » lit une
+      # branche publique sans session, la ou l'artifact exige un compte.
+      - name: Deposer le wheel sur la branche de transit
+        shell: bash
+        run: |
+          set -euo pipefail
+          WHEEL=$(ls dist/*.whl)
+          NAME=$(basename "$WHEEL")
+          SHA=$(python -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$WHEEL")
+          echo "wheel  : $NAME"
+          echo "sha256 : $SHA"
+          BR=pyyaml-cp315-wheel-artifact
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan "$BR"
+          git rm -rfq -- . >/dev/null 2>&1 || true
+          cp "$WHEEL" "./$NAME"
+          printf '%s  %s\n' "$SHA" "$NAME" > SHA256SUMS.txt
+          git add -f "$NAME" SHA256SUMS.txt
+          git commit -qm "PyYAML cp315 accelere, construit depuis le sdist PyPI verifie"
+          git push -f origin "HEAD:refs/heads/$BR"
+          echo "Recuperation : git fetch origin $BR && git show origin/$BR:$NAME"
 
       - name: Publier l'artifact
         uses: actions/upload-artifact@v4
