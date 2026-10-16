@@ -1,5 +1,14 @@
 ﻿; Give AppVer and SourceFolder from command line, eg:
 ; "C:\Program Files (x86)\Inno Setup 5\iscc" /dAppVer=1.13 /dSourceFolder=build inno_setup.iss 
+;
+; ATTENTION (2026-10-08) : script hérité, ce n'est pas celui qui produit les
+; releases (c'est simpleInstallerWin10x64.iss, voir le workflow win10x64min.yml).
+; Il est encore nommé « 3.7.6x86 » et AppVer 0.0.10.
+; Depuis le retrait de la filière Économie-Gestion de requirements.txt
+; (pandas / matplotlib / jupyterlab / notebook / Excel), le module jupyter
+; n'est plus installé : les associations .ipynb et l'icone JupyterLab
+; ci-dessous pointeraient vers un module absent. A ne ranimer que pour une
+; édition « eco » séparée.
 #define AppVer "0.0.10"
 #define InstallerPrefix "thonnyTN-3.7.6x86"
 #define SourceFolder "build"
