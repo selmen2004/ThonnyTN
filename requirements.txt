@@ -1,21 +1,21 @@
 #l'editeur python utilisé
-thonny == 4.1.7
+thonny == 5.0.0
 #prise en charge de esp32/esp8266
-esptool == 5.1.0
+esptool == 5.4.0
 
-#Ajouts Selmen 
+#Ajouts Selmen
 
 #designer as a python package (shortcut : pyqt5_qt5_designer ) ; loads pyqt5 as well
 pyqt5_qt5_designer == 0.0.14
 
 #thonny_palestine_flag (not in pip )
-thonny-autosave == 0.0.22
+thonny-autosave == 0.0.23
 thonny-loaduiautocomplete == 0.2.2
-thonny-tunisiaschools == 0.0.14
+thonny-tunisiaschools == 0.1.0
 
 #needed by thonny
 pyserial == 3.5
-wheel == 0.46.3
+wheel == 0.48.0
 
 #thonny themes :
 thonny-onedark == 0.2.0
@@ -34,17 +34,12 @@ thonny-friendly == 0.0.7
 #thonny-flake
 #thonny-error-explainer
 
-#Sections scientifiques
-pandas == 3.0.0
-numpy == 2.4.2
-matplotlib == 3.10.8
+#Bac sciences expérimentales / bac informatique :
+#numpy est imposé par le curriculum ("On utilisera la bibliothèque numpy
+#pour implémenter les tableaux") ; c'est la seule bibliothèque scientifique requise.
+numpy == 2.5.3
 
-#Section economie
-xlrd == 2.0.2
-xlsxwriter == 3.2.9
-xlwt == 1.3.0
-openpyxl == 3.1.5
-jupyterlab == 4.5.4 
-#spécifier notebook n'est pas nécéssaire , puisque jupyterlab l'a comme dépendence
-#notebook == 7.1.3
-
+#RETRAITÉ le 2026-10-08 — filière Économie-Gestion, hors programme Sciences Informatique :
+#  pandas / matplotlib / jupyterlab / notebook / xlrd / xlsxwriter / xlwt / openpyxl
+#Référence : Curriculum d'Informatique, Section Sciences de l'Informatique (Sept. 2021)
+#et Programme 2022-2023. À réintroduire dans une édition "eco" séparée si besoin.
