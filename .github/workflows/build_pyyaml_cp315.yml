@@ -60,6 +60,15 @@ jobs:
   build:
     runs-on: windows-latest
 
+    # Les valeurs viennent d'env, pas de « ${{ inputs.* }} » directement : sur un
+    # declencheur push, inputs est VIDE et setup-python installe alors autre chose
+    # que 3.15 (mesure : run n°1, echec a l'etape 3). Le || fournit le defaut.
+    env:
+      PYTHON_SERIES: "${{ inputs.python_version || '3.15' }}"
+      PYYAML_VERSION: "${{ inputs.pyyaml_version || '6.0.3' }}"
+      PYYAML_SHA256: "${{ inputs.pyyaml_sha256 || 'd76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f' }}"
+      LIBYAML_REF: "${{ inputs.libyaml_ref || '0.2.5' }}"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,34 +76,35 @@ jobs:
       # Le wheel porte la serie de l'interpreteur qui le construit :
       # « setup-python 3.15 » n'est pas decoratif, c'est lui qui produit le tag
       # cp315 (et python315.lib dont le lien a besoin).
-      - name: Set up Python ${{ inputs.python_version }}
+      - name: Set up Python (serie visee)
         uses: actions/setup-python@v5
         with:
-          python-version: '${{ inputs.python_version }}'
+          python-version: '${{ env.PYTHON_SERIES }}'
 
       - name: Verifier l'interpreteur et pip
         shell: bash
         run: |
           python -m pip install -U pip
           python - <<'PY'
-          import pip, sys
-          serie = ("3", "15")
-          build = sys.version_info[:2]
-          print("interpréteur :", ".".join(map(str, build)), "| pip :", pip.__version__)
-          if build != serie:
-              sys.exit("LE WHEEL SERAIT TAGGUÉ cp%s%s, pas cp315." % build)
+          import os, pip, sys
+          cible = os.environ["PYTHON_SERIES"].strip().split(".")[:2]
+          got = [str(x) for x in sys.version_info[:2]]
+          print("interpreteur : %s | pip : %s | serie visee : %s"
+                % (".".join(got), pip.__version__, ".".join(cible)))
+          if got != cible:
+              sys.exit("LE WHEEL SERAIT TAGGUÉ cp%s, PAS cp%s." % ("".join(got), "".join(cible)))
           PY
 
       - name: Telecharger le sdist officiel et verifier son empreinte
         shell: bash
         run: |
           python -m pip download --no-deps --no-binary :all: -d sdist \
-            "pyyaml==${{ inputs.pyyaml_version }}"
+            "pyyaml==$PYYAML_VERSION"
           python - <<'PY'
-          import glob, hashlib, sys
+          import glob, hashlib, os, sys
           path = glob.glob("sdist/pyyaml-*.tar.gz")[0]
           got = hashlib.sha256(open(path, "rb").read()).hexdigest()
-          want = "${{ inputs.pyyaml_sha256 }}"
+          want = os.environ["PYYAML_SHA256"].strip()
           print("sdist  :", path)
           print("sha256 :", got)
           if got != want:
@@ -105,7 +115,7 @@ jobs:
       - name: Construire libyaml en statique
         shell: bash
         run: |
-          git clone --depth 1 --branch "${{ inputs.libyaml_ref }}" \
+          git clone --depth 1 --branch "$LIBYAML_REF" \
             https://github.com/yaml/libyaml.git
           mkdir -p libyaml/build
           cd libyaml/build
@@ -152,12 +162,12 @@ jobs:
       # Le wheel est-il reellement accelere ? Un wheel cp315 sans _yaml .pyd
       # s'installe et marche, juste aussi vite que le pur Python — et rien dans
       # le nom de fichier ne le dit. On verifie donc le contenu ET l'attribut.
-      - name: Verifier le wheel sur le Python 3.15 reel
+      - name: Verifier le wheel sur le Python vise
         shell: bash
         run: |
-          ls dist/pyyaml-*-cp315-cp315-win_amd64.whl
+          ls dist/pyyaml-*.whl
           python - <<'PY'
-          import glob, zipfile
+          import glob, os, zipfile
           whl = glob.glob("dist/pyyaml-*.whl")[0]
           names = zipfile.ZipFile(whl).namelist()
           pyd = [n for n in names if n.endswith((".pyd", ".dll"))]
@@ -167,7 +177,9 @@ jobs:
           wheel_meta = zipfile.ZipFile(whl).read(
               [n for n in names if n.endswith("WHEEL")][0]).decode()
           print(wheel_meta.strip())
-          assert "Tag: cp315-cp315-win_amd64" in wheel_meta
+          abi = "cp" + "".join(os.environ["PYTHON_SERIES"].strip().split(".")[:2])
+          assert "Tag: %s-%s-win_amd64" % (abi, abi) in wheel_meta, \
+              "tag ABI inattendu : %s" % abi
           PY
           python -m venv verif
           verif/Scripts/python.exe -m pip install --no-index --find-links dist pyyaml
