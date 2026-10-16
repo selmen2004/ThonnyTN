@@ -1,0 +1,194 @@
+name: Construire le wheel PyYAML cp315 accelere (libyaml)
+
+# Pourquoi ce fichier existe
+# --------------------------
+# PyYAML 6.0.3 (derniere publiee) ne contient AUCUN fichier pour cp315 sur PyPI :
+# les wheels Windows s'arretent a cp314. Comme esptool exige « PyYAML>=5.1 »,
+# une distribution ThonnyTN en Python 3.15 devrait compiler PyYAML chez l'eleve,
+# et l'installation hors-ligne echoue (mesure 2026-10-16, section 11 du plan) :
+#   1. isolation de build -> « No matching distribution found for Cython>=3.0 »
+#   2. avec Cython ajoute  -> « Microsoft Visual C++ 14.0 or greater is required »
+#   Comme la ligne [Run] n°2 installe « thonny esptool » dans une seule commande
+#   pip, c'est Thonny lui-meme qui ne s'installerait pas.
+#
+# Ce job fabrique le vrai wheel cp315-cp315-win_amd64 (avec l'accelerateur
+# libyaml) sur un runner Windows, ou MSVC et le SDK existent — pas sur un PC de
+# lycee, et pas sur ce poste. La recette suit le CI amont de yaml/pyyaml
+# (master, job windows_libyaml + windows_pyyaml) : libyaml 0.2.5 en statique via
+# CMake, puis le backend PEP 517 de PyYAML nourri par « pyyaml_build_config ».
+#
+# Le resultat n'est pas un depôt de confiance : telecharger un wheel cp315 « tout
+# fait » d'un hebergeur tiers revient a embarquer un binaire non verifie. Ici le
+# code vient du sdist officiel de PyPI, dont le sha256 est verifie avant build.
+#
+# DUREE DE VIE : provisoire. Retirer des que PyYAML publie une version avec des
+# wheels cp315 sur PyPI (suivi : yaml/pyyaml#951 et #981 ; le CI amont vise deja
+# « cp315-win_amd64 », il ne manque que la publication).
+#
+# Usage : Actions -> ce workflow -> Execute workflow. Telecharger l'artifact,
+# le poser a la racine du depot (comme thonny_palestine_flag-*.whl, que
+# « cp *.whl depsx64 » embarque deja), et noter le sha256 affiche dans la
+# release (c'est l'item 11 du plan : un fichier de provenance vrai).
+
+on:
+  workflow_dispatch:
+    inputs:
+      python_version:
+        description: Serie Python du wheel vise
+        default: '3.15'
+      pyyaml_version:
+        description: Version de PyYAML a construire
+        default: '6.0.3'
+      pyyaml_sha256:
+        description: SHA256 du sdist PyPI (controlé avant build)
+        default: 'd76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f'
+      libyaml_ref:
+        description: Ref libyaml utilisee par le CI amont
+        default: '0.2.5'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Le wheel porte la serie de l'interpreteur qui le construit :
+      # « setup-python 3.15 » n'est pas decoratif, c'est lui qui produit le tag
+      # cp315 (et python315.lib dont le lien a besoin).
+      - name: Set up Python ${{ inputs.python_version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '${{ inputs.python_version }}'
+
+      - name: Verifier l'interpreteur et pip
+        shell: bash
+        run: |
+          python -m pip install -U pip
+          python - <<'PY'
+          import pip, sys
+          serie = ("3", "15")
+          build = sys.version_info[:2]
+          print("interpréteur :", ".".join(map(str, build)), "| pip :", pip.__version__)
+          if build != serie:
+              sys.exit("LE WHEEL SERAIT TAGGUÉ cp%s%s, pas cp315." % build)
+          PY
+
+      - name: Telecharger le sdist officiel et verifier son empreinte
+        shell: bash
+        run: |
+          python -m pip download --no-deps --no-binary :all: -d sdist \
+            "pyyaml==${{ inputs.pyyaml_version }}"
+          python - <<'PY'
+          import glob, hashlib, sys
+          path = glob.glob("sdist/pyyaml-*.tar.gz")[0]
+          got = hashlib.sha256(open(path, "rb").read()).hexdigest()
+          want = "${{ inputs.pyyaml_sha256 }}"
+          print("sdist  :", path)
+          print("sha256 :", got)
+          if got != want:
+              sys.exit("EMPREINTE DIFFERENTE DU PIN : %s != %s" % (got, want))
+          print("empreinte conforme : le code construit est bien celui de PyPI.")
+          PY
+
+      - name: Construire libyaml en statique
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "${{ inputs.libyaml_ref }}" \
+            https://github.com/yaml/libyaml.git
+          mkdir -p libyaml/build
+          cd libyaml/build
+          # Pas de -G : CMake detecte le Visual Studio du runner. Le generator
+          # change d'une image a l'autre ("17 2026" vs "18 2026") et le coder en
+          # dur est la premiere cause d'echec de ce type de job.
+          cmake.exe -A x64 -DYAML_STATIC_LIB_NAME=yaml \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.10 ..
+          cmake.exe --build . --config Release
+          ls -l Release
+
+      # Le backend PEP 517 de PyYAML applique ces cles sur son build_ext
+      # (setup.py : ActiveConfigSettings.current()['pyyaml_build_config']).
+      # "force": 1 est la cle qui compte : sans elle, une extension qui echoue
+      # produit silencieusement un wheel sans accelerateur — exactement le wheel
+      # etiquete cp315 mais sans .pyd qu'on trouve chez les hebergeurs tiers.
+      # Chemins ABSOLUS : pendant le build, pip travaille dans un repertoire
+      # temporaire et les chemins relatifs du CI amont ("../libyaml/...") n'y
+      # correspondent plus.
+      - name: Construire le wheel cp315
+        shell: bash
+        run: |
+          ROOT=$(pwd -W 2>/dev/null || pwd)
+          # Une seule ligne JSON, produite par json.dumps : le backend fait
+          # json.loads() dessus, toute échappement manuel est une source de
+          # plantage silencieuse (le build retombe alors sur « pas de config »).
+          CFG=$(python - "$ROOT" <<'PY'
+          import json, sys
+          root = sys.argv[1].replace("\\", "/")
+          print(json.dumps({
+              "force": 1,
+              "include_dirs": ["%s/libyaml/include" % root],
+              "library_dirs": ["%s/libyaml/build/Release" % root],
+              "define": [["YAML_DECLARE_STATIC", 1]],
+          }))
+          PY
+          )
+          echo "pyyaml_build_config = $CFG"
+          python -m pip wheel --no-deps \
+            --config-settings "pyyaml_build_config=$CFG" \
+            -w dist sdist/pyyaml-*.tar.gz
+          ls -l dist
+
+      # Le wheel est-il reellement accelere ? Un wheel cp315 sans _yaml .pyd
+      # s'installe et marche, juste aussi vite que le pur Python — et rien dans
+      # le nom de fichier ne le dit. On verifie donc le contenu ET l'attribut.
+      - name: Verifier le wheel sur le Python 3.15 reel
+        shell: bash
+        run: |
+          ls dist/pyyaml-*-cp315-cp315-win_amd64.whl
+          python - <<'PY'
+          import glob, zipfile
+          whl = glob.glob("dist/pyyaml-*.whl")[0]
+          names = zipfile.ZipFile(whl).namelist()
+          pyd = [n for n in names if n.endswith((".pyd", ".dll"))]
+          print("fichiers binaires :", pyd or "AUCUN")
+          assert any(n.endswith("_yaml.pyd") for n in names), \
+              "wheel sans accelerateur : le build a produit du pur Python"
+          wheel_meta = zipfile.ZipFile(whl).read(
+              [n for n in names if n.endswith("WHEEL")][0]).decode()
+          print(wheel_meta.strip())
+          assert "Tag: cp315-cp315-win_amd64" in wheel_meta
+          PY
+          python -m venv verif
+          verif/Scripts/python.exe -m pip install --no-index --find-links dist pyyaml
+          verif/Scripts/python.exe - <<'PY'
+          import yaml, time
+          print("PyYAML", yaml.__version__, "| accelerateur libyaml :", yaml.__with_libyaml__)
+          assert yaml.__with_libyaml__ is True, "importé mais non accéléré"
+          data = {"a": [1, 2, {"b": None, "c": 3.5}], "d": "éàü"}
+          txt = yaml.safe_dump(data, allow_unicode=True)
+          assert yaml.safe_load(txt) == data, "round-trip invalide"
+          t = time.perf_counter()
+          for _ in range(300):
+              yaml.safe_load(txt)
+          print("300 parses en %.3f s" % (time.perf_counter() - t))
+          PY
+
+      - name: Empreinte du wheel (a recopier dans la provenance)
+        shell: bash
+        run: |
+          cd dist
+          for f in *.whl; do
+            echo "$f"
+            python -c "import hashlib,sys;print('  sha256', hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$f"
+          done
+
+      - name: Publier l'artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyyaml-cp315-win_amd64
+          path: dist/*.whl
+          if-no-files-found: error
